@@ -20,10 +20,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'ToDoList',
       theme: ThemeData(
 
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 10, 9, 14)),
         useMaterial3: true,
       ),
       home:AnimatedSplashScreen(duration:3000,splash: ImagePath.appLogo, nextScreen: Homepage(database: database), backgroundColor: Colors.lightBlue,)
