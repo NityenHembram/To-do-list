@@ -9,7 +9,7 @@ part 'database.g.dart';
 
 class Tasks extends Table{
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get title => text().withLength(min: 1,max: 50)();
+  TextColumn get title => text().withLength(min: 1, max: 50)();
   BoolColumn get complete => boolean().withDefault(Constant(false))();
 }
 

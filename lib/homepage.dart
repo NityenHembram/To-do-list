@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'database.dart';
 
@@ -10,7 +11,71 @@ class Homepage extends StatefulWidget {
   @override
   State<Homepage> createState() => _HomepageState();
 }
+final GlobalKey _buttonKey = GlobalKey(); // To get button position
+OverlayEntry? _overlayEntry;
 
+void _showPopup(BuildContext context) {
+  // Get the button's position
+  final RenderBox renderBox = _buttonKey.currentContext!.findRenderObject() as RenderBox;
+  final Offset offset = renderBox.localToGlobal(Offset.zero);
+
+  // Create the OverlayEntry
+  _overlayEntry = OverlayEntry(
+    builder: (BuildContext context) {
+      return Stack(
+        children: [
+          // Transparent background to detect taps outside the popup
+          GestureDetector(
+            onTap: () {
+              _overlayEntry?.remove(); // Close the popup
+            },
+            child: Container(
+              color: Colors.transparent,
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+            ),
+          ),
+          // Positioned popup
+          Positioned(
+            left: offset.dx,
+            bottom: MediaQuery.of(context).size.height - offset.dy,
+            child: Material(
+              elevation: 4.0,
+              borderRadius: BorderRadius.circular(8.0),
+              child: Container(
+                width: 200, // Set the desired width
+                padding: EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: 10, // Replace with your actual item count
+                  itemBuilder: (BuildContext context, int index) {
+                    return ListTile(
+                      title: Text('Item ${index + 1}'),
+                      onTap: () {
+                        _overlayEntry?.remove(); // Close the popup
+                        print('Selected Item ${index + 1}');
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  // Insert the OverlayEntry into the Overlay
+  Overlay.of(context).insert(_overlayEntry!);
+}
+
+
+String? selectedItem;
 class _HomepageState extends State<Homepage> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   List<Task> tasks = []; // Previous state of tasks
@@ -45,36 +110,95 @@ class _HomepageState extends State<Homepage> {
               },
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8,8,8,20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: taskController,
-                    decoration: InputDecoration(
-                      labelText: "New Task",
-                      border: OutlineInputBorder(),
+          Card(
+              child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      key:_buttonKey,
+                        onPressed: () {
+
+                          _showPopup(context);
+
+                          // showModalBottomSheet(
+                          //     context: context,
+                          //     shape: const RoundedRectangleBorder( // <-- SEE HERE
+                          //       borderRadius: BorderRadius.vertical(
+                          //         top: Radius.circular(25.0),
+                          //       ),
+                          //     ),
+                          //     builder: (context) {
+                          //       return SizedBox(
+                          //         height: 200,
+                          //         child: Column(
+                          //           crossAxisAlignment: CrossAxisAlignment.start,
+                          //           mainAxisSize: MainAxisSize.min,
+                          //           children: const <Widget>[
+                          //             Text('data'),
+                          //             Text('data'),
+                          //             Text('data'),
+                          //             Text('data'),
+                          //             Text('data'),
+                          //             Text('data'),
+                          //           ],
+                          //         ),
+                          //       );
+                          //     });
+                        },
+                        child: Text('Task List')),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          shape: CircleBorder(), padding: EdgeInsets.all(20)),
+                      onPressed: () {
+                        if (taskController.text.trim().isNotEmpty) {
+                          widget.database.addTask(TasksCompanion(
+                            title: drift.Value(taskController.text.trim()),
+                          ));
+                          taskController.clear();
+                        }
+                      },
+                      child: Text("+"),
                     ),
-                  ),
+                  ],
                 ),
-                SizedBox(width: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      shape: CircleBorder(), padding: EdgeInsets.all(20)),
-                  onPressed: () {
-                    if (taskController.text.trim().isNotEmpty) {
-                      widget.database.addTask(TasksCompanion(
-                        title: drift.Value(taskController.text.trim()),
-                      ));
-                      taskController.clear();
-                    }
-                  },
-                  child: Text("Add"),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: taskController,
+                        decoration: InputDecoration(
+                          labelText: "New Task",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          shape: CircleBorder(), padding: EdgeInsets.all(20)),
+                      onPressed: () {
+                        if (taskController.text.trim().isNotEmpty) {
+                          widget.database.addTask(TasksCompanion(
+                            title: drift.Value(taskController.text.trim()),
+                          ));
+                          taskController.clear();
+                        }
+                      },
+                      child: Text("Add"),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            ],
+          ))
         ],
       ),
     );
