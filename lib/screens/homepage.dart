@@ -1,9 +1,11 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:to_do_list/Utility/constants.dart';
 import 'package:to_do_list/Utility/preference_manager.dart';
 import 'package:to_do_list/res/image_path.dart';
+import 'package:to_do_list/screens/about_screen.dart';
 import 'package:to_do_list/screens/task_list_screen.dart';
 import '../Utility/utils.dart';
 import '../db/database.dart';
@@ -205,6 +207,8 @@ class _HomepageState extends State<Homepage> {
                           child: TextButton(
                             onPressed: () {
                               _overlayEntry?.remove();
+                              Utils.showAddTaskDialog(
+                                  context, widget.database, null);
                               Utils.showAddTaskDialog(
                                   context, widget.database, null);
                               setState(() {
