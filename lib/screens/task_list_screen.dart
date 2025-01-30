@@ -23,7 +23,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             IconButton(
               icon: Icon(Icons.add_circle_outline),
               onPressed: () {
-                Utils.showAddTaskDialog(context, widget.database,null);
+                Utils.showAddTaskDialog(context, widget.database, null);
               },
             ),
           ],
@@ -72,11 +72,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                   ),
                                 ],
                               ),
-                              Row(
+                              listItem.isDeleteAble ? Row(
                                 children: [
                                   InkWell(
                                     onTap: () {
-                                      Utils.showAddTaskDialog(context, widget.database,listItem);
+                                      Utils.showAddTaskDialog(
+                                          context, widget.database, listItem);
                                     },
                                     child: SvgPicture.asset(ImagePath.editIcon),
                                   ),
@@ -92,7 +93,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                         SvgPicture.asset(ImagePath.deleteIcon),
                                   )
                                 ],
-                              ),
+                              ) : SizedBox.shrink(),
                             ],
                           ),
                         ));

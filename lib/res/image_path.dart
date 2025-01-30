@@ -5,4 +5,5 @@ class ImagePath{
   static String deleteIcon = "assets/images/delete.svg";
   static String editIcon = "assets/images/editIcon.svg";
   static String taskIcon = "assets/images/taskIcon.svg";
+  static String sendIcon = "assets/images/send.png";
 }

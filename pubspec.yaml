@@ -87,6 +87,7 @@ flutter:
       - assets/images/delete.svg
       - assets/images/editIcon.svg
       - assets/images/taskIcon.svg
+      - assets/images/send.png
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
