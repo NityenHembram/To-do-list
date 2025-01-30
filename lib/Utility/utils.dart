@@ -32,8 +32,8 @@ class Utils {
             ElevatedButton(
               onPressed: () {
                 if (_taskController.text.trim().isNotEmpty) {
-                  if (item == null) {
-                    database.updateTaskList(item!.id, TasksListCompanion(
+                  if (item != null) {
+                    database.updateTaskList(item.id, TasksListCompanion(
                       taskList: drift.Value(_taskController.text.trim()),
                     ));
                   } else {

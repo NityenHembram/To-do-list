@@ -5,6 +5,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:to_do_list/Utility/constants.dart';
 import 'package:to_do_list/Utility/preference_manager.dart';
 import 'package:to_do_list/res/image_path.dart';
+import 'package:to_do_list/screens/about_screen.dart';
 import 'package:to_do_list/screens/task_list_screen.dart';
 import '../Utility/utils.dart';
 import '../db/database.dart';
@@ -161,7 +162,8 @@ class _HomepageState extends State<Homepage> {
                           child: TextButton(
                             onPressed: () {
                               _overlayEntry?.remove();
-                              Utils.showAddTaskDialog(context, widget.database,null);
+                              Utils.showAddTaskDialog(
+                                  context, widget.database, null);
                             },
                             child: Text("Add Task",
                                 style: TextStyle(fontSize: 18)),
@@ -199,17 +201,10 @@ class _HomepageState extends State<Homepage> {
                     ),
                   );
                 } else if (value == '2') {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: Text("About"),
-                      content: Text("This is a sample About section."),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text("OK"),
-                        ),
-                      ],
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AboutScreen(),
                     ),
                   );
                 }
