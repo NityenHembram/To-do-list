@@ -9,12 +9,16 @@ class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text().withLength(min: 1, max: 50)();
   BoolColumn get complete => boolean().withDefault(Constant(false))();
-  IntColumn get taskListId => integer().nullable().customConstraint('REFERENCES tasks_list(id) ON DELETE CASCADE')();
+  DateTimeColumn get taskDateTime => dateTime().nullable()();
+  IntColumn get priority => integer().withDefault(Constant(1))();
+  IntColumn get taskListId => integer()
+      .nullable()
+      .customConstraint('REFERENCES tasks_list(id) ON DELETE CASCADE')();
 }
 
 class TasksList extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get taskList => text().withLength(min: 1, max: 50)();
+  TextColumn get taskListName => text().withLength(min: 1, max: 50)();
   BoolColumn get isDeleteAble => boolean().withDefault(Constant(true))();
 }
 
@@ -22,6 +26,8 @@ class FinishedTaskTable extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text().withLength(min: 1, max: 50)();
   BoolColumn get complete => boolean().withDefault(Constant(false))();
+  DateTimeColumn get taskDateTime => dateTime().nullable()();
+  IntColumn get priority => integer().withDefault(Constant(1))();
   IntColumn get taskListId => integer()
       .nullable()
       .customConstraint('REFERENCES tasks_list(id) ON DELETE CASCADE')();
@@ -51,12 +57,23 @@ class AppDatabase extends _$AppDatabase {
     final result = await (select(tasksList)..where((tbl) => tbl.id.equals(id)))
         .getSingleOrNull();
     return result
-        ?.taskList; // Return the `taskList` value or `null` if no match
+        ?.taskListName; // Return the `taskList` value or `null` if no match
   }
 
   // Task Operations
   Future<List<Task>> getAllTasks() => select(tasks).get();
-  Future<int> addTask(TasksCompanion task) => into(tasks).insert(task);
+  Future<void> addTask(TasksCompanion task) async {
+    await into(tasks)
+        .insert(task)
+        .then((id) => {print(id)})
+        .onError((e, s) => {print("error while adding task$e  $s")});
+  }
+
+  Future<int> updateTask(int id, TasksCompanion updateTasks) {
+    return (update(tasks)..where((tbl) => tbl.id.equals(id)))
+        .write(updateTasks);
+  }
+
   Future<int> deleteTask(int id) =>
       (delete(tasks)..where((tbl) => tbl.id.equals(id))).go();
 
@@ -82,10 +99,11 @@ class AppDatabase extends _$AppDatabase {
     if (task != null) {
       // Insert the task into FinishedTaskTable
       await into(finishedTaskTable).insert(FinishedTaskTableCompanion(
-        title: Value(task.title),
-        complete: Value(true),
-        taskListId: Value(task.taskListId),
-      ));
+          title: Value(task.title),
+          complete: Value(true),
+          taskListId: Value(task.taskListId),
+          priority: Value(task.priority),
+          taskDateTime: Value(task.taskDateTime)));
 
       // Delete the task from the Tasks table
       await (delete(tasks)..where((tbl) => tbl.id.equals(taskId))).go();
@@ -102,10 +120,11 @@ class AppDatabase extends _$AppDatabase {
     if (finishedTask != null) {
       // Insert the task back into the Tasks table
       await into(tasks).insert(TasksCompanion(
-        title: Value(finishedTask.title),
-        complete: Value(false),
-        taskListId: Value(finishedTask.taskListId),
-      ));
+          title: Value(finishedTask.title),
+          complete: Value(false),
+          taskListId: Value(finishedTask.taskListId),
+          priority: Value(finishedTask.priority),
+          taskDateTime: Value(finishedTask.taskDateTime)));
 
       // Delete the task from the FinishedTaskTable
       await (delete(finishedTaskTable)
@@ -128,7 +147,6 @@ class AppDatabase extends _$AppDatabase {
 }
 
 LazyDatabase _openConnection() {
-
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'app.db'));
