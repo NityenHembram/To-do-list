@@ -1,14 +1,13 @@
 import 'package:drift/drift.dart' as drift;
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:to_do_list/Utility/constants.dart';
 import 'package:to_do_list/Utility/preference_manager.dart';
 import 'package:to_do_list/res/image_path.dart';
-import 'package:to_do_list/screens/about_screen.dart';
+import 'package:to_do_list/screens/edit_task_screen.dart';
 import 'package:to_do_list/screens/task_list_screen.dart';
 import '../Utility/utils.dart';
 import '../db/database.dart';
+import 'about_screen.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key, required this.database});
@@ -24,7 +23,8 @@ String? selectedItem;
 class _HomepageState extends State<Homepage> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   List<Task> tasks = []; // Previous state of tasks
-  var selectedTaskListItem = 'Default';
+  TasksListData? selectedTaskListItem;
+  String selectedTaskName = 'Default';
   var selectedTaskListItemId = 0;
   final preferenceManager = PreferenceManager();
   bool _isPopupVisible = false;
@@ -33,36 +33,32 @@ class _HomepageState extends State<Homepage> {
   OverlayEntry? _overlayEntry;
   var showFinishedList = false;
   final finishedSectionName = 'Finished';
-  var hasCreated = false;
 
   @override
   void initState() {
-    initialization();
-    addPreDefineTasks();
     super.initState();
   }
 
   initialization() async {
-    selectedTaskListItem =
-        await preferenceManager.getValue(Constants.TASK_LIST_KEY);
-    if (selectedTaskListItem == finishedSectionName) {
-      showFinishedList = true;
+    final taskItem = await preferenceManager.getTask();
+    if (taskItem != null) {
+      selectedTaskListItem = taskItem;
+      selectedTaskName = selectedTaskListItem!.taskListName;
+      if (selectedTaskName == finishedSectionName) {
+        showFinishedList = true;
+      }
+      selectedTaskListItemId = selectedTaskListItem!.id;
     }
+  }
 
-    await preferenceManager
-        .getValue(Constants.TASK_LIST_ID_KEY)
-        .then((onValue) {
-      setState(() {
-        selectedTaskListItemId = onValue;
-      });
-    });
-
-    hasCreated = await preferenceManager.getValue(Constants.CREATE_TASKLIST);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    initialization();
   }
 
   void _showPopup(BuildContext context) {
     // Get the button's position
-
     final RenderBox renderBox =
         _buttonKey.currentContext!.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
@@ -140,7 +136,7 @@ class _HomepageState extends State<Homepage> {
                                   return ListTile(
                                     leading:
                                         SvgPicture.asset(ImagePath.taskIcon),
-                                    title: Text(item.taskList),
+                                    title: Text(item.taskListName),
                                     trailing: FutureBuilder(
                                         future: widget.database
                                             .getTaskCount(item.id),
@@ -155,15 +151,13 @@ class _HomepageState extends State<Homepage> {
                                       setState(() {
                                         _isPopupVisible = false;
                                         showFinishedList = false;
-                                        selectedTaskListItem = item.taskList;
+                                        selectedTaskListItem = item;
+                                        selectedTaskName = item.taskListName;
                                         selectedTaskListItemId = item.id;
                                       });
 
-                                      preferenceManager.setValue(
-                                          Constants.TASK_LIST_KEY,
-                                          item.taskList);
-                                      preferenceManager.setValue(
-                                          Constants.TASK_LIST_ID_KEY, item.id);
+                                      preferenceManager.saveTask(item);
+
                                       print(
                                           "selected task id ==> $selectedTaskListItemId");
                                       // print('Selected Item ${index + 1}');
@@ -179,10 +173,10 @@ class _HomepageState extends State<Homepage> {
                               setState(() {
                                 showFinishedList = true;
                                 _isPopupVisible = false;
-                                selectedTaskListItem = finishedSectionName;
+                                selectedTaskName = finishedSectionName;
                               });
-                              preferenceManager.setValue(
-                                  Constants.TASK_LIST_KEY, finishedSectionName);
+                              // preferenceManager.setValue(
+                              //     Constants.TASK_LIST_KEY, finishedSectionName);
                               _overlayEntry?.remove();
                             },
                             child: Row(
@@ -209,14 +203,26 @@ class _HomepageState extends State<Homepage> {
                               _overlayEntry?.remove();
                               Utils.showAddTaskDialog(
                                   context, widget.database, null);
-                              Utils.showAddTaskDialog(
-                                  context, widget.database, null);
                               setState(() {
                                 _isPopupVisible = false;
                               });
                             },
-                            child: Text("Add Task",
-                                style: TextStyle(fontSize: 18)),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size(double.infinity,
+                                  0), // ✅ This makes it full width
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              alignment: Alignment.centerLeft,
+                            ),
+                            child: Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(10),
+                                child: Text(
+                                  "Add Task",
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -250,18 +256,9 @@ class _HomepageState extends State<Homepage> {
                   ),
                 );
               } else if (value == '2') {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text("About"),
-                    content: Text("This is a sample About section."),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("OK"),
-                      ),
-                    ],
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => AboutScreen()),
                 );
               }
             },
@@ -314,8 +311,18 @@ class _HomepageState extends State<Homepage> {
                                             style: TextStyle(
                                                 fontWeight: FontWeight.bold)),
                                         Text(taskListName,
-                                            style:
-                                                TextStyle(color: Colors.grey)),
+                                            style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 14)),
+                                        (finishedTask.taskDateTime != null)
+                                            ? Text(
+                                                Utils.convertDateTimeToString(
+                                                    "EEE, MMM d hh:mm a",
+                                                    finishedTask.taskDateTime!),
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12))
+                                            : SizedBox.shrink(),
                                         // Show the task list name
                                       ],
                                     ),
@@ -335,7 +342,8 @@ class _HomepageState extends State<Homepage> {
                       }
                     }))
           else
-            Expanded(
+            Flexible(
+              fit: FlexFit.loose,
               child: StreamBuilder<List<Task>>(
                 stream: widget.database
                     .watchTasksForTaskList(selectedTaskListItemId),
@@ -344,18 +352,33 @@ class _HomepageState extends State<Homepage> {
                   print(snapshot.data);
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return Center(
-                        child: Text("List $selectedTaskListItem is empty."));
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                          Text("List "),
+                          Text(
+                            selectedTaskName,
+                            style: TextStyle(
+                                color: const Color.fromARGB(255, 200, 151, 6)),
+                          ),
+                          Text(" is empty.")
+                        ]));
                   } else {
                     final newTasks = snapshot.data!;
-                    _updateAnimatedList(newTasks);
-                    return AnimatedList(
-                      key: _listKey,
-                      initialItemCount: tasks.length,
-                      itemBuilder: (context, index, animation) {
-                        final task = tasks[index];
-                        return _buildItem(task, animation);
-                      },
-                    );
+                    return ListView.builder(
+                        itemCount: newTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = newTasks[index];
+                          return _buildItem(task);
+                        });
+                    //
+                    // print(newTasks);
+                    // _updateAnimatedList(newTasks);
+                    // return AnimatedList(
+                    //   key: _listKey,
+                    //   initialItemCount: tasks.length,
+                    //   itemBuilder: (context, index, animation) {},
+                    // );
                   }
                 },
               ),
@@ -384,7 +407,7 @@ class _HomepageState extends State<Homepage> {
                       child: Row(
                         children: [
                           Text(
-                            selectedTaskListItem,
+                            selectedTaskName,
                             style: TextStyle(fontSize: 20),
                           ),
                           SizedBox(width: 10),
@@ -402,19 +425,27 @@ class _HomepageState extends State<Homepage> {
                       ),
                     ),
                     SizedBox(width: 8),
-                    // ElevatedButton(
-                    //   style: ElevatedButton.styleFrom(
-                    //       shape: CircleBorder(), padding: EdgeInsets.all(20)),
-                    //   onPressed: () {
-                    //     // if (taskController.text.trim().isNotEmpty) {
-                    //     //   widget.database.addTask(TasksCompanion(
-                    //     //     title: drift.Value(taskController.text.trim()),
-                    //     //   ));
-                    //     //   taskController.clear();
-                    //     // }
-                    //   },
-                    //   child: Icon(Icons.add),
-                    // ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          shape: CircleBorder(), padding: EdgeInsets.all(16)),
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    EditTaskScreen(database: widget.database)));
+                        if (result != null) {
+                          setState(() {
+                            print("in home Page $result");
+                            selectedTaskListItem = result;
+                            selectedTaskName =
+                                (result as TasksListData).taskListName;
+                            selectedTaskListItemId = result.id;
+                          });
+                        }
+                      },
+                      child: Icon(Icons.add),
+                    ),
                   ],
                 ),
               ),
@@ -467,56 +498,30 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  void addPreDefineTasks() async {
-    // Check if predefined tasks have already been created
-    if (!hasCreated) {
-      // List of predefined task lists
-      var preDefineTasksList = ['Default', 'Personal', 'Shopping', 'Wishlist'];
+  // void _updateAnimatedList(List<Task> newTasks) {
+  //   final oldTasks = List<Task>.from(tasks);
+  //   tasks = newTasks;
 
-      // Add each task list to the database
-      for (var taskList in preDefineTasksList) {
-        await widget.database.addTaskList(
-          TasksListCompanion(
-            taskList: drift.Value(taskList),
-            isDeleteAble:
-                drift.Value(taskList != 'Default'), // Set isDeleteAble
-          ),
-        );
-      }
+  //   // Detect additions
+  //   for (var i = 0; i < tasks.length; i++) {
+  //     if (i >= oldTasks.length || tasks[i] != oldTasks[i]) {
+  //       _listKey.currentState
+  //           ?.insertItem(i, duration: Duration(milliseconds: 300));
+  //     }
+  //   }
 
-      // Mark that predefined tasks have been created
-      await preferenceManager.setValue(Constants.CREATE_TASKLIST, true);
-      setState(() {
-        hasCreated =
-            true; // Update the state to reflect that tasks have been created
-      });
-    }
-  }
-
-  void _updateAnimatedList(List<Task> newTasks) {
-    final oldTasks = List<Task>.from(tasks);
-    tasks = newTasks;
-
-    // Detect additions
-    for (var i = 0; i < tasks.length; i++) {
-      if (i >= oldTasks.length || tasks[i] != oldTasks[i]) {
-        _listKey.currentState
-            ?.insertItem(i, duration: Duration(milliseconds: 300));
-      }
-    }
-
-    // Detect deletions
-    for (var i = 0; i < oldTasks.length; i++) {
-      if (i >= tasks.length || oldTasks[i] != tasks[i]) {
-        final removedTask = oldTasks[i];
-        _listKey.currentState?.removeItem(
-          i,
-          (context, animation) => _buildItem(removedTask, animation),
-          duration: Duration(milliseconds: 300),
-        );
-      }
-    }
-  }
+  //   // Detect deletions
+  //   for (var i = 0; i < oldTasks.length; i++) {
+  //     if (i >= tasks.length || oldTasks[i] != tasks[i]) {
+  //       final removedTask = oldTasks[i];
+  //       _listKey.currentState?.removeItem(
+  //         i,
+  //         (context, animation) => _buildItem(removedTask, animation),
+  //         duration: Duration(milliseconds: 300),
+  //       );
+  //     }
+  //   }
+  // }
 
   // Widget _buildItem(Task task, Animation<double> animation,
   //     {bool isRemoving = false}) {
@@ -542,29 +547,109 @@ class _HomepageState extends State<Homepage> {
   //   );
   // }
 
-  Widget _buildItem(Task task, Animation<double> animation) {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: Offset(1.0, 0.0), // Start from right for adding items
-        end: Offset.zero,
-      ).animate(animation),
-      child: Card(
-        child: ListTile(
-          title: Text(
-            task.title,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          trailing: Checkbox(
-            value: task.complete,
-            onChanged: (value) {
-              widget.database.moveToFinishedTask(task.id);
-            },
-          ),
+  Widget _buildItem(Task task) {
+    final taskName = task.title;
+    final taskDate = task.taskDateTime;
+    final priority = task.priority;
+    return Card(
+      child: ListTile(
+        title: Row(
+          spacing: 10,
+          children: [
+            Text(
+              task.title,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            (taskDate != null)
+                ? Card(
+                    color: prorityColor(priority),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        priorityText(priority),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 10),
+                      ),
+                    ),
+                  )
+                : SizedBox.shrink()
+          ],
         ),
+        subtitle: (taskDate != null)
+            ? Text(
+                Utils.convertDateTimeToString("EEE, MMM d hh:mm a", taskDate),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: taskDate.isBefore(DateTime.now())
+                        ? Colors.red
+                        : Colors.black),
+              )
+            : null,
+        trailing: Checkbox(
+          value: task.complete,
+          onChanged: (value) {
+            widget.database.moveToFinishedTask(task.id);
+          },
+        ),
+        onTap: () {
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      EditTaskScreen(database: widget.database, task: task)));
+        },
       ),
     );
   }
+
+  MaterialColor? prorityColor(int priority) {
+    switch (priority) {
+      case 1:
+        return Colors.green;
+      case 2:
+        return Colors.amber;
+      case 3:
+        return Colors.red;
+    }
+    return null;
+  }
+
+  String priorityText(int priority) {
+    switch (priority) {
+      case 1:
+        return "low";
+      case 2:
+        return "min";
+      case 3:
+        return "high";
+    }
+    return "";
+  }
 }
+
+  // Widget _buildItem(Task task, Animation<double> animation) {
+  //   return SlideTransition(
+  //     position: Tween<Offset>(
+  //       begin: Offset(1.0, 0.0), // Start from right for adding items
+  //       end: Offset.zero,
+  //     ).animate(animation),
+  //     child: Card(
+  //       child: ListTile(
+  //         title: Text(
+  //           task.title,
+  //           style: TextStyle(fontWeight: FontWeight.bold),
+  //         ),
+  //         trailing: Checkbox(
+  //           value: task.complete,
+  //           onChanged: (value) {
+  //             widget.database.moveToFinishedTask(task.id);
+  //           },
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+// }
 
 // Widget _buildItem(Task task, Animation<double> animation) {
 //   return SlideTransition(

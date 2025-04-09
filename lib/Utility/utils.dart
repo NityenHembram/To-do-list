@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../db/database.dart';
 
@@ -18,7 +19,7 @@ class Utils {
           content: TextField(
             controller: _taskController,
             decoration: InputDecoration(
-              labelText: item == null ? "Task Title" : item.taskList,
+              labelText: item == null ? "Task Title" : item.taskListName,
               border: OutlineInputBorder(),
             ),
           ),
@@ -33,12 +34,15 @@ class Utils {
               onPressed: () {
                 if (_taskController.text.trim().isNotEmpty) {
                   if (item != null) {
-                    database.updateTaskList(item.id, TasksListCompanion(
-                      taskList: drift.Value(_taskController.text.trim()),
-                    ));
+                    database.updateTaskList(
+                        item.id,
+                        TasksListCompanion(
+                          taskListName:
+                              drift.Value(_taskController.text.trim()),
+                        ));
                   } else {
                     database.addTaskList(TasksListCompanion(
-                      taskList: drift.Value(_taskController.text.trim()),
+                      taskListName: drift.Value(_taskController.text.trim()),
                     ));
                     _taskController.clear();
                   }
@@ -61,7 +65,7 @@ class Utils {
         return AlertDialog(
           title: Text("Delete Task"),
           content: Text(
-            "Do you really want to delete the ${item.taskList} list?",
+            "Do you really want to delete the ${item.taskListName} list?",
           ),
           actions: [
             TextButton(
@@ -86,4 +90,39 @@ class Utils {
       },
     );
   }
+
+  static String formateDateAndTime(String format,
+      {String date = '', String time = ''}) {
+    if (date.isNotEmpty) {
+      DateTime parseDate = DateTime.parse(date);
+      String formatedDate = DateFormat(format).format(parseDate);
+      return formatedDate;
+    } else if (time.isNotEmpty) {
+      DateTime parseTime = DateFormat("HH:mm").parse(time);
+      String formatedTime = DateFormat(format).format(parseTime);
+      return formatedTime;
+    } else {
+      return '';
+    }
+  }
+
+  static String convertDateToString(String format, DateTime dateTime) {
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final String formatedDate = DateFormat(format).format(date);
+    return formatedDate;
+  }
+
+  static String convertTimeToString(String format, String timeOfDay ) {
+      DateTime parseTime = DateFormat("HH:mm").parse(timeOfDay);
+    final String formatedDate = DateFormat(format).format(parseTime);
+    return formatedDate;
+  }
+
+
+  static String convertDateTimeToString(String format, DateTime dateTime) {
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day, dateTime.hour, dateTime.minute);
+    final String formatedDate = DateFormat(format).format(date);
+    return formatedDate;
+  }
+
 }

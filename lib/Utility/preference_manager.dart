@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:to_do_list/Utility/constants.dart';
+import 'package:to_do_list/db/database.dart';
 
 class PreferenceManager {
   // Singleton instance
@@ -15,7 +19,6 @@ class PreferenceManager {
   // Method to set a value (String, int, bool, double, or List<String>)
   Future<bool> setValue(String key, dynamic value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-
     if (value is String) {
       return prefs.setString(key, value);
     } else if (value is int) {
@@ -47,5 +50,20 @@ class PreferenceManager {
   Future<bool> clearPreferences() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.clear();
+  }
+
+  Future<void> saveTask(TasksListData task) async {
+    String jsonString = jsonEncode(task.toJson());
+    setValue(Constants.TASK_LIST_KEY, jsonString);
+  }
+
+  Future<TasksListData?> getTask() async {
+    String jsonString =  await getValue(Constants.TASK_LIST_KEY);
+    if (jsonString != null && jsonString.isNotEmpty) {
+      print("this is the ${jsonString}");
+      Map<String, dynamic> json = jsonDecode(jsonString);
+      return TasksListData.fromJson(json);
+    }
+    return null;
   }
 }

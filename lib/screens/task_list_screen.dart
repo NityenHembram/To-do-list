@@ -67,7 +67,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                                     width: 20,
                                   ),
                                   Text(
-                                    listItem.taskList,
+                                    listItem.taskListName,
                                     style: TextStyle(fontSize: 18),
                                   ),
                                 ],
